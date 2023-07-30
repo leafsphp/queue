@@ -127,9 +127,9 @@ class Job
         // 
     }
     
-    public static function dispatch($config = [])
+    public static function dispatch($queue = 'default', $config = [])
     {
-        $queue = new \Leaf\Queue();
+        $queue = \Leaf\Queue\Config::get($queue);
 
         return $queue->push([
             'class' => get_called_class(),
