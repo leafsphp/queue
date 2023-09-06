@@ -16,6 +16,7 @@ class Queue
      * The queue config
      */
     protected $config = [
+        'archive' => false,
         'adapter' => 'db',
         'connection' => [],
         'table' => 'leafphp_queue_main',
@@ -46,7 +47,7 @@ class Queue
         $this->config = array_merge(
             $this->config,
             \Leaf\Config::get('queue') ?? [],
-            $config
+            $config ?? [],
         );
 
         return $this->config;
