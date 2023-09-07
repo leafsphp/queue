@@ -160,6 +160,18 @@ class Queue
     }
 
     /**
+     * Return queue commands
+     */
+    public function commands()
+    {
+        return [
+            \Leaf\Queue\Commands\DeleteJobCommand::class,
+            \Leaf\Queue\Commands\GenerateJobCommand::class,
+            \Leaf\Queue\Commands\QueuePauseCommand::class,
+        ];
+    }
+
+    /**
      * Initialize a worker to work the queue
      */
     public function run()
