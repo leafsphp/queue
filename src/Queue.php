@@ -162,12 +162,13 @@ class Queue
     /**
      * Return queue commands
      */
-    public function commands()
+    public static function commands()
     {
         return [
             \Leaf\Queue\Commands\DeleteJobCommand::class,
             \Leaf\Queue\Commands\GenerateJobCommand::class,
             \Leaf\Queue\Commands\QueuePauseCommand::class,
+            \Leaf\Queue\Commands\QueueRunCommand::class,
         ];
     }
 
