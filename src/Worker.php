@@ -60,7 +60,7 @@ class Worker
             $jobConfig = json_decode($jobData['config'] ?? "{}", true);
             
             try {
-                /** @var \Leaf\Queue\Job */
+                /** @var \Leaf\Job */
                 $job = new $jobData['class']($jobData, $jobConfig, $this->queue);
 
                 $job->handleDelay();

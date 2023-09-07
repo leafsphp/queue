@@ -16,6 +16,7 @@ class Job
 
     /**
      * Queue instance
+     * @var \Leaf\Queue
      */
     protected $queue = null;
 
@@ -126,10 +127,22 @@ class Job
     {
         // 
     }
-    
-    public static function dispatch($queue = 'default', $config = [])
+
+    public static function dispatch($config = [], $queue = 'default')
     {
-        $queue = \Leaf\Queue\Config::get($queue);
+        $queue = new Queue;
+        $queueConfig = MvcConfig('queue') ?? [];
+
+        if (empty($queueConfig)) {
+            if (!file_exists($configFile = \Aloe\Command\Config::rootpath('queue.config.php'))) {
+                throw new \Exception('Queue config not found');
+            }
+
+            $queueConfig = require $configFile;
+        }
+
+        $queue->config($queueConfig);
+        $queue->connect();
 
         return $queue->push([
             'class' => get_called_class(),

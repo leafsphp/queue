@@ -65,7 +65,7 @@ class Queue
         $adapter = "\\Leaf\\Queue\\Adapters\\$adapter";
         
         $this->adapter = new $adapter($config);
-        $this->adapter->connect($config['connection']);
+        $this->adapter->connect($config['connections'][$config['default'] ?? 'redis']);
 
         return $this;
     }
