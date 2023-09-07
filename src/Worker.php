@@ -75,6 +75,7 @@ class Worker
                     continue;
                 }
 
+                echo "\n\nProcessing job: {$jobData['class']} --- #{$job->getJobId()}\n";
                 $job->trigger();
 
                 if ($this->memoryExceeded($jobConfig['memory'])) {
