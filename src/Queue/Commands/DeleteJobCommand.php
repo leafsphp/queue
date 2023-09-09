@@ -3,6 +3,7 @@
 namespace Leaf\Queue\Commands;
 
 use Aloe\Command;
+use Illuminate\Support\Str;
 
 class DeleteJobCommand extends Command
 {
@@ -12,13 +13,27 @@ class DeleteJobCommand extends Command
 
     protected function config()
     {
-        $this->setArgument('job', 'required');
+        $this->setArgument('job', 'required', 'job name');
     }
 
     protected function handle()
     {
-        $job = $this->argument('config');
+        $job = Str::studly(Str::singular($this->argument('job')));
 
-        $this->writeln("Deleting job $job");
+        if (!strpos($job, 'Job')) {
+            $job .= 'Job';
+        }
+
+        $file = \Aloe\Command\Config::rootpath(AppPaths('jobs') . "/$job.php");
+
+        if (!file_exists($file)) {
+            $this->error("$job doesn't exist");
+            return 1;
+        }
+
+        unlink($file);
+
+        $this->comment("$job deleted successfully");
+        return 0;
     }
 }
