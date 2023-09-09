@@ -28,7 +28,7 @@ class Redis implements Adapter
     public function connect($connection)
     {
         $this->redis->init($connection);
-        
+
         if (!$this->redis->get($this->config['table'])) {
             $this->redis->set($this->config['table'], json_encode([]));
         }
@@ -65,6 +65,7 @@ class Redis implements Adapter
             if ($job['id'] === $id) {
                 unset($jobs[$key]);
                 $this->redis->set($this->config['table'], json_encode($jobs));
+
                 return true;
             }
         }
@@ -84,6 +85,7 @@ class Redis implements Adapter
             if ($job['id'] === $id) {
                 $jobs[$key]['status'] = $status;
                 $this->redis->set($this->config['table'], json_encode($jobs));
+
                 return true;
             }
         }
@@ -105,6 +107,7 @@ class Redis implements Adapter
     public function getJobs()
     {
         $jobs = $this->redis->get($this->config['table']) ?? [];
+
         return json_decode($jobs, true);
     }
 
@@ -136,6 +139,7 @@ class Redis implements Adapter
                 $jobs[$key]['status'] = 'pending';
                 $jobs[$key]['retry_count'] = (int) $retryCount + 1;
                 $this->redis->set($this->config['table'], json_encode($jobs));
+
                 return true;
             }
         }

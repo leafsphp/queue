@@ -15,7 +15,7 @@ class QueueRunCommand extends Command
     {
         $this->writeln('Starting queue worker...');
 
-        $queue = new Queue;
+        $queue = new Queue();
         $queueConfigFile = getcwd() . '/config/queue.php';
         $queueConfig = [];
 

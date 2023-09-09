@@ -120,17 +120,17 @@ class Job
      */
     public static function create(callable $job)
     {
-        // 
+        //
     }
 
     public function handle()
     {
-        // 
+        //
     }
 
     public static function dispatch($config = [], $queue = 'default')
     {
-        $queue = new Queue;
+        $queue = new Queue();
         $queueConfig = MvcConfig('queue') ?? [];
 
         if (empty($queueConfig)) {

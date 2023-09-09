@@ -63,7 +63,7 @@ class Queue
 
         $adapter = ucfirst($config['adapter']);
         $adapter = "\\Leaf\\Queue\\Adapters\\$adapter";
-        
+
         $this->adapter = new $adapter($config);
         $this->adapter->connect($config['connections'][$config['default'] ?? 'redis']);
 
@@ -106,7 +106,7 @@ class Queue
 
     /**
      * Set job status
-     * 
+     *
      * @param string|int $id The id of the job to set status
      * @param string $status The status to set
      */

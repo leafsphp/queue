@@ -16,7 +16,7 @@ interface Adapter
      * @param array $connection Credentials for the queue storage
      */
     public function connect($connection);
-    
+
     /**
      * Push job to queue
      * @param array $job The job to push to the queue
@@ -31,7 +31,7 @@ interface Adapter
 
     /**
      * Set job status
-     * 
+     *
      * @param string|int $id The id of the job to set status
      * @param string $status The status to set
      */

@@ -28,12 +28,14 @@ class DeleteJobCommand extends Command
 
         if (!file_exists($file)) {
             $this->error("$job doesn't exist");
+
             return 1;
         }
 
         unlink($file);
 
         $this->comment("$job deleted successfully");
+
         return 0;
     }
 }

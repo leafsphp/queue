@@ -55,6 +55,7 @@ class Db implements Adapter
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 
@@ -69,12 +70,13 @@ class Db implements Adapter
         $this->db
             ->delete($this->config['table'])
             ->where([
-                "id" => $id
+                "id" => $id,
             ])
             ->execute();
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 
@@ -89,15 +91,16 @@ class Db implements Adapter
         $this->db
             ->update($this->config['table'])
             ->params([
-                "status" => $status
+                "status" => $status,
             ])
             ->where([
-                "id" => $id
+                "id" => $id,
             ])
             ->execute();
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 
@@ -112,15 +115,16 @@ class Db implements Adapter
         $this->db
             ->update($this->config['table'])
             ->params([
-                "status" => "failed"
+                "status" => "failed",
             ])
             ->where([
-                "id" => $id
+                "id" => $id,
             ])
             ->execute();
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 
@@ -141,7 +145,7 @@ class Db implements Adapter
                 'retry_count' => 'INT',
                 'created_at' => 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
                 'updated_at' => 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'PRIMARY KEY' => '(ID)'
+                'PRIMARY KEY' => '(ID)',
             ])
             ->execute();
     }
@@ -162,7 +166,7 @@ class Db implements Adapter
         return $this->db
             ->select($this->config['table'])
             ->where([
-                'status' => 'pending'
+                'status' => 'pending',
             ])
             ->orderBy('id', 'asc')
             ->limit(1)
@@ -178,15 +182,16 @@ class Db implements Adapter
             ->update($this->config['table'])
             ->params([
                 "status" => "pending",
-                "retry_count" => (int) $retryCount + 1
+                "retry_count" => (int) $retryCount + 1,
             ])
             ->where([
-                "id" => $id
+                "id" => $id,
             ])
             ->execute();
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 

@@ -28,6 +28,7 @@ class GenerateJobCommand extends Command
 
         if (file_exists($file)) {
             $this->error("$job already exists");
+
             return 1;
         }
 
@@ -39,6 +40,7 @@ class GenerateJobCommand extends Command
         file_put_contents($file, $fileContent);
 
         $this->comment("$job generated successfully");
+
         return 0;
     }
 }

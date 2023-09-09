@@ -13,7 +13,7 @@ class Worker
         'timeout' => 60,
         'sleep' => 3,
         'tries' => 3,
-        'force' => false
+        'force' => false,
     ];
 
     /**
@@ -22,12 +22,14 @@ class Worker
     public function config($config)
     {
         $this->config = array_merge($this->config, $config);
+
         return $this;
     }
 
     public function queue($queue)
     {
         $this->queue = $queue;
+
         return $this;
     }
 
@@ -58,7 +60,7 @@ class Worker
             }
 
             $jobConfig = json_decode($jobData['config'] ?? "{}", true);
-            
+
             try {
                 /** @var \Leaf\Job */
                 $job = new $jobData['class']($jobData, $jobConfig, $this->queue);
@@ -67,11 +69,13 @@ class Worker
 
                 if ($job->hasExpired()) {
                     $job->handleExpiry();
+
                     continue;
                 }
 
                 if ($job->hasReachedRetryLimit()) {
                     $job->handleRetryLimit();
+
                     continue;
                 }
 
@@ -84,9 +88,11 @@ class Worker
 
                 // at this point, the job has been successfully processed
                 $job->removeFromQueue();
+
                 continue;
             } catch (\Throwable $th) {
                 $job->retry();
+
                 continue;
             }
         }
