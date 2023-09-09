@@ -33,6 +33,9 @@ class QueueRunCommand extends Command
 
         $queue->config($queueConfig);
         $queue->connect();
+
+        $this->comment("\nQueue worker started");
+
         $queue->run();
 
         return 0;
