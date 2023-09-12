@@ -26,6 +26,10 @@ class GenerateJobCommand extends Command
 
         $file = \Aloe\Command\Config::rootpath(AppPaths('jobs') . "/$job.php");
 
+        if (!is_dir(\Aloe\Command\Config::rootpath(AppPaths('jobs')))) {
+            mkdir(\Aloe\Command\Config::rootpath(AppPaths('jobs')));
+        }
+
         if (file_exists($file)) {
             $this->error("$job already exists");
 
