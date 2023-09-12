@@ -42,9 +42,7 @@ class QueueInstallCommand extends Command
         $this->info('Queue migration generated successfully');
         $this->comment('Running queue migration...');
 
-        $filename = basename($migrationFile, '.php');
-
-        if (!\Aloe\Core::run("php leaf db:migrate -f $filename", $this->output)) {
+        if (!\Aloe\Core::run('php leaf db:migrate -f jobs', $this->output)) {
             $this->error('Failed to run queue migration');
             return 1;
         }
