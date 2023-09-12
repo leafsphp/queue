@@ -167,6 +167,8 @@ class Queue
         return [
             \Leaf\Queue\Commands\DeleteJobCommand::class,
             \Leaf\Queue\Commands\GenerateJobCommand::class,
+            \Leaf\Queue\Commands\QueueConfigCommand::class,
+            \Leaf\Queue\Commands\QueueInstallCommand::class,
             \Leaf\Queue\Commands\QueuePauseCommand::class,
             \Leaf\Queue\Commands\QueueRunCommand::class,
         ];
