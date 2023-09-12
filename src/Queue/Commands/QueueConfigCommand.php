@@ -25,11 +25,13 @@ class QueueConfigCommand extends Command
 
         if (file_exists($appConfigFile)) {
             $this->error('Queue config already exists');
+
             return 1;
         }
 
         if (!copy(__DIR__ . '/stubs/config.stub', $appConfigFile)) {
             $this->error('Failed to generate queue config');
+
             return 1;
         }
 

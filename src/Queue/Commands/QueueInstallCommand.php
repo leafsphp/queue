@@ -4,7 +4,6 @@ namespace Leaf\Queue\Commands;
 
 use Aloe\Command;
 use Aloe\Core;
-use Leaf\Queue;
 
 class QueueInstallCommand extends Command
 {
@@ -31,11 +30,13 @@ class QueueInstallCommand extends Command
 
         if (file_exists($migrationFile)) {
             $this->error('Queue migration already exists');
+
             return 1;
         }
 
         if (!copy(__DIR__ . '/stubs/migration.stub', $migrationFile)) {
             $this->error('Failed to generate queue migration');
+
             return 1;
         }
 
@@ -46,10 +47,12 @@ class QueueInstallCommand extends Command
 
         if (!\Aloe\Core::run("php leaf db:migrate -f $filename", $this->output)) {
             $this->error('Failed to run queue migration');
+
             return 1;
         }
 
         $this->info('Queue migration ran successfully');
+
         return 0;
     }
 }
