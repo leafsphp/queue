@@ -35,7 +35,7 @@ class Db implements Adapter
             'host' => $connection['host'] ?? '127.0.0.1',
             'username' => $connection['username'] ?? 'root',
             'password' => $connection['password'] ?? '',
-            'dbname' => $connection['dbname'] ?? '',
+            'dbname' => $connection['database'] ?? '',
         ]);
     }
 
