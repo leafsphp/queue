@@ -15,57 +15,19 @@ class Queue
     /**
      * The queue config
      */
-    protected $config = [
-        'archive' => false,
-        'adapter' => 'db',
-        'connection' => [],
-        'table' => 'leafphp_queue_main',
-        'workers' => 1,
-        'workerConfig' => [
-            'delay' => 0,
-            'delayBeforeRetry' => 0,
-            'expire' => 60,
-            'force' => false,
-            'memory' => 128,
-            'quitOnEmpty' => false,
-            'sleep' => 3,
-            'timeout' => 60,
-            'tries' => 3,
-        ],
-    ];
-
-    /**
-     * Config for the queue and worker
-     * @param array $config The config for the queue and worker
-     */
-    public function config(?array $config = null)
-    {
-        if (!$config) {
-            return $this->config;
-        }
-
-        $this->config = array_merge(
-            $this->config,
-            \Leaf\Config::get('queue') ?? [],
-            $config ?? [],
-        );
-
-        return $this->config;
-    }
+    protected $connection = [];
 
     /**
      * Connect to queue adapter
+     * @param array $connection The connection to use
      * @return \Leaf\Queue
      */
-    public function connect(): Queue
+    public function connect($connection): Queue
     {
-        $config = $this->config(\Leaf\Config::get('queue') ?? []);
-
-        $adapter = ucfirst($config['adapter']);
+        $adapter = ucfirst($connection['driver']);
         $adapter = "\\Leaf\\Queue\\Adapters\\$adapter";
 
-        $this->adapter = new $adapter($config);
-        $this->adapter->connect($config['connections'][$config['default'] ?? 'redis']);
+        $this->adapter = (new $adapter())->connect($connection);
 
         return $this;
     }
@@ -84,10 +46,6 @@ class Queue
      */
     public function push(array $job)
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         $this->adapter->pushJobToQueue($job);
     }
 
@@ -97,10 +55,6 @@ class Queue
      */
     public function pop($id)
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         $this->adapter->popJobFromQueue($id);
     }
 
@@ -112,10 +66,6 @@ class Queue
      */
     public function setJobStatus($id, $status)
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         $this->adapter->setJobStatus($id, $status);
     }
 
@@ -125,10 +75,6 @@ class Queue
      */
     public function getNextJob()
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         return $this->adapter->getNextJob();
     }
 
@@ -138,10 +84,6 @@ class Queue
      */
     public function markJobAsFailed($id)
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         $this->adapter->markJobAsFailed($id);
     }
 
@@ -152,10 +94,6 @@ class Queue
      */
     public function retryFailedJob($id, $retryCount = 0)
     {
-        if (!$this->adapter) {
-            $this->connect();
-        }
-
         $this->adapter->retryFailedJob($id, $retryCount);
     }
 
@@ -167,24 +105,7 @@ class Queue
         return [
             \Leaf\Queue\Commands\DeleteJobCommand::class,
             \Leaf\Queue\Commands\GenerateJobCommand::class,
-            \Leaf\Queue\Commands\QueueConfigCommand::class,
-            \Leaf\Queue\Commands\QueueInstallCommand::class,
-            \Leaf\Queue\Commands\QueuePauseCommand::class,
-            \Leaf\Queue\Commands\QueueRunCommand::class,
+            \Leaf\Queue\Commands\QueueWorkCommand::class,
         ];
-    }
-
-    /**
-     * Initialize a worker to work the queue
-     */
-    public function run()
-    {
-        for ($i = 0; $i < $this->config['workers']; $i++) {
-            $worker = new Worker();
-            $worker
-                ->config($this->config['workerConfig'])
-                ->queue($this)
-                ->run();
-        }
     }
 }

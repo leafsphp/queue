@@ -9,8 +9,6 @@ namespace Leaf\Queue\Adapters;
  */
 interface Adapter
 {
-    public function __construct($config = []);
-
     /**
      * Connect to queue storage
      * @param array $connection Credentials for the queue storage

@@ -14,22 +14,12 @@ class Worker
         'sleep' => 3,
         'tries' => 3,
         'force' => false,
+        'quitOnEmpty' => false,
     ];
-
-    /**
-     * Configuration for the worker
-     */
-    public function config($config)
-    {
-        $this->config = array_merge($this->config, $config);
-
-        return $this;
-    }
 
     public function queue($queue)
     {
-        $this->queue = $queue;
-
+        $this->queue = (new Queue())->connect($queue);
         return $this;
     }
 
@@ -40,57 +30,58 @@ class Worker
 
     public function run()
     {
-        if (!$this->queue->getAdapter()) {
-            $this->queue->connect();
-        }
-
-        $shouldLoop = true;
-
-        while ($shouldLoop) {
+        while (true) {
             $jobData = $this->queue->getNextJob();
 
             if (!$jobData) {
-                if (!$this->config['quitOnEmpty']) {
-                    sleep($this->config['sleep']);
-                } else {
-                    $shouldLoop = false;
+                if ($this->config['quitOnEmpty']) {
+                    break;
                 }
+
+                // [ENHANCE] Would be better to use events instead of sleeping for a fixed time
+                sleep($this->config['sleep']);
 
                 continue;
             }
 
             $jobConfig = json_decode($jobData['config'] ?? "{}", true);
 
+            /** @var \Leaf\Job */
+            $job = (new $jobData['class'])->fromQueue($jobData, $jobConfig, $this->queue);
+
+            $job->handleDelay();
+
+            if ($job->hasExpired()) {
+                $job->handleExpiry();
+
+                continue;
+            }
+
+            if ($job->hasReachedRetryLimit()) {
+                echo "  - Job {$job->getJobId()} has reached retry limit, marking as failed\n";
+                $job->setStatus('failed');
+
+                continue;
+            }
+
+            echo "Processing job: {$jobData['class']} --- #{$job->getJobId()}\n";
+
             try {
-                /** @var \Leaf\Job */
-                $job = new $jobData['class']($jobData, $jobConfig, $this->queue);
-
-                $job->handleDelay();
-
-                if ($job->hasExpired()) {
-                    $job->handleExpiry();
-
-                    continue;
-                }
-
-                if ($job->hasReachedRetryLimit()) {
-                    $job->handleRetryLimit();
-
-                    continue;
-                }
-
-                echo "\n\nProcessing job: {$jobData['class']} --- #{$job->getJobId()}\n";
                 $job->trigger();
 
-                if ($this->memoryExceeded($jobConfig['memory'])) {
-                    exit(12);
-                }
+                // [FIX] this runs after the job has been processed
+                // if ($this->memoryExceeded($jobConfig['memory'])) {
+                //     exit(12);
+                // }
 
                 // at this point, the job has been successfully processed
                 $job->removeFromQueue();
 
                 continue;
             } catch (\Throwable $th) {
+                echo "  - Job #{$job->getJobId()} failed: {$th->getMessage()}\n";
+                echo "  - Retrying job #{$job->getJobId()}...\n";
+
                 $job->retry();
 
                 continue;

@@ -2,7 +2,9 @@
 
 namespace Leaf;
 
-class Job
+use Leaf\Queue\Dispatchable;
+
+abstract class Job implements Dispatchable
 {
     /**
      * Job config
@@ -15,19 +17,45 @@ class Job
     protected $job = [];
 
     /**
+     * Data to pass to the job
+     */
+    protected $data = [];
+
+    /**
      * Queue instance
      * @var \Leaf\Queue
      */
     protected $queue = null;
 
     /**
+     * Configured queue connection
+     */
+    protected string $connection = 'default';
+
+    /**
+     * Return configured connection
+     */
+    public function connection()
+    {
+        return $this->connection;
+    }
+
+    /**
      * Load a job for running
      */
-    public function __construct($job, $config, $queue)
+    public function fromQueue($job, $config, $queue)
     {
         $this->job = $job;
-        $this->config = $config;
         $this->queue = $queue;
+
+        if (isset($config['data'])) {
+            $this->data = $config['data'];
+            unset($config['data']);
+        }
+
+        $this->config = $config;
+
+        return $this;
     }
 
     /**
@@ -74,15 +102,6 @@ class Job
     }
 
     /**
-     * Handle job retry limit
-     */
-    public function handleRetryLimit()
-    {
-        echo "Job {$this->job['id']} has reached retry limit\n";
-        $this->queue->pop($this->job['id']);
-    }
-
-    /**
      * Set job status
      */
     public function setStatus($status)
@@ -96,17 +115,19 @@ class Job
     public function retry()
     {
         sleep($this->config['delayBeforeRetry'] ?? 0);
-        $this->queue->retryFailedJob($this->job['id'], $this->config['retry_count']);
+        $this->queue->retryFailedJob($this->job['id'], $this->job['retry_count']);
     }
 
     /**
      * Release the job back into the queue after (n) seconds.
      *
-     * @param  int  $delay
+     * @param int  $delay
      * @return void
      */
     public function release($delay = 0)
     {
+        sleep($delay);
+
         $this->queue->push([
             'class' => $this->job['class'],
             'config' => json_encode($this->config),
@@ -116,46 +137,39 @@ class Job
     }
 
     /**
-     * Create a new job
+     * Pass data to the job
      */
-    public static function create(callable $job)
+    public function with($data)
     {
-        //
+        $this->data = $data;
+        return $this;
     }
 
-    public function handle()
+    public function stack()
     {
-        //
+        return;
     }
 
-    public static function dispatch($config = [], $queue = 'default')
+    public function getConfig()
     {
-        $queue = new Queue();
-        $queueConfig = MvcConfig('queue') ?? [];
-
-        if (empty($queueConfig)) {
-            if (!file_exists($configFile = \Aloe\Command\Config::rootpath('queue.config.php'))) {
-                throw new \Exception('Queue config not found');
-            }
-
-            $queueConfig = require $configFile;
-        }
-
-        $queue->config($queueConfig);
-        $queue->connect();
-
-        return $queue->push([
-            'class' => get_called_class(),
-            'config' => json_encode(array_merge($queue->config()['workerConfig'] ?? [], $config)),
-            'status' => 'pending',
-            'retry_count' => 0,
-        ]);
+        return [
+            'delay' => 0,
+            'delayBeforeRetry' => 0,
+            'expire' => 60,
+            'force' => false,
+            'memory' => 128,
+            'quitOnEmpty' => false,
+            'sleep' => 3,
+            'timeout' => 60,
+            'tries' => 3,
+            'data' => $this->data,
+        ];
     }
 
     public function trigger()
     {
         $this->queue->setJobStatus($this->job['id'], 'processing');
-        $this->handle();
+        $this->handle(...$this->data);
     }
 
     public function removeFromQueue()
