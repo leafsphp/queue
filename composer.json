@@ -30,11 +30,9 @@
 	},
 	"minimum-stability": "dev",
 	"prefer-stable": true,
-	"require": {
-		"leafs/db": "*",
-		"leafs/redis": "^0.1.1"
-	},
 	"require-dev": {
+        "leafs/db": "*",
+        "leafs/redis": "*",
 		"friendsofphp/php-cs-fixer": "^3.0"
 	},
 	"scripts": {
