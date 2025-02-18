@@ -128,6 +128,7 @@ class Batch implements Dispatchable
     public function with($data)
     {
         $this->data = $data;
+
         return $this;
     }
 

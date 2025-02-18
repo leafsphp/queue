@@ -61,6 +61,7 @@ class Database implements Adapter
 
         if ($this->db->errors()) {
             $this->errors = $this->db->errors();
+
             return false;
         }
 

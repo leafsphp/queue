@@ -20,6 +20,7 @@ class Worker
     public function queue($queue)
     {
         $this->queue = (new Queue())->connect($queue);
+
         return $this;
     }
 
@@ -47,7 +48,7 @@ class Worker
             $jobConfig = json_decode($jobData['config'] ?? "{}", true);
 
             /** @var \Leaf\Job */
-            $job = (new $jobData['class'])->fromQueue($jobData, $jobConfig, $this->queue);
+            $job = (new $jobData['class']())->fromQueue($jobData, $jobConfig, $this->queue);
 
             $job->handleDelay();
 
