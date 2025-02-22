@@ -30,7 +30,7 @@ abstract class Job implements Dispatchable
     /**
      * Number of seconds to wait before processing a job
      */
-    protected int $delay = 0;
+    protected $delay = 0;
 
     /**
      * Number of seconds to wait before retrying a job that has failed.
@@ -108,6 +108,7 @@ abstract class Job implements Dispatchable
      */
     public function handleDelay()
     {
+        echo "Job #{$this->job['id']} is delayed for {$this->delay} seconds\n";
         sleep($this->delay);
     }
 
@@ -124,7 +125,7 @@ abstract class Job implements Dispatchable
      */
     public function handleExpiry()
     {
-        echo "Job {$this->job['id']} has expired\n";
+        echo "Job #{$this->job['id']} has expired\n";
         $this->queue->pop($this->job['id']);
     }
 
@@ -195,15 +196,13 @@ abstract class Job implements Dispatchable
     public function getConfig()
     {
         return [
-            'delay' => 0,
-            'delayBeforeRetry' => 0,
-            'expire' => 60,
-            'force' => false,
-            'memory' => 128,
-            'quitOnEmpty' => false,
-            'sleep' => 3,
-            'timeout' => 60,
-            'tries' => 3,
+            'delay' => $this->delay,
+            'delayBeforeRetry' => $this->delayBeforeRetry,
+            'expire' => $this->expire,
+            'force' => $this->force,
+            'memory' => $this->memory,
+            'timeout' => $this->timeout,
+            'tries' => $this->tries,
             'data' => static::$data,
         ];
     }
