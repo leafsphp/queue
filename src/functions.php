@@ -19,29 +19,27 @@ function queue()
 /**
  * Dispatch a job, batch or a group of jobs
  *
- * @param array|mixed $dispatchable The job, batch or group of jobs to dispatch
+ * @param array|\Leaf\Queue\Dispatchable|string $dispatchable The job, batch or group of jobs to dispatch
  * @param array $data The data to pass to the job
  */
-function dispatch($dispatchable, $data = [])
+function dispatch($dispatchable)
 {
     if (is_array($dispatchable)) {
         foreach ($dispatchable as $item) {
-            dispatch($item, $data);
+            dispatch($item);
         }
 
         return;
     }
 
-    /** @var \Leaf\Queue\Dispatchable */
-    $jobOrBatch = new $dispatchable();
+    if (is_string($dispatchable)) {
+        $dispatchable = new $dispatchable();
+    }
+
     $queueModuleConfig = MvcConfig('queue') ?? [];
-    $jobConnection = $jobOrBatch->connection();
+    $jobConnection = $dispatchable->connection();
 
     $defaultConnection = $queueModuleConfig['connections'][$queueModuleConfig['default'] ?? 'database'];
-
-    if (!empty($data)) {
-        $jobOrBatch->with($data);
-    }
 
     // if (\Leaf\Config::getStatic('queue')) {
     //     return queue()->push([
@@ -56,8 +54,8 @@ function dispatch($dispatchable, $data = [])
     queue()->connect($queueModuleConfig['connections'][$jobConnection] ?? $defaultConnection);
 
     return queue()->push([
-        'class' => $jobOrBatch::class,
-        'config' => json_encode($jobOrBatch->getConfig()),
+        'class' => $dispatchable::class,
+        'config' => json_encode($dispatchable->getConfig()),
         'status' => 'pending',
         'retry_count' => 0,
     ]);

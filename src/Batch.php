@@ -28,13 +28,34 @@ class Batch implements Dispatchable
     protected $queue = null;
 
     /**
+     * Configured queue connection
+     */
+    protected string $connection = 'default';
+
+    /**
+     * Return configured connection
+     */
+    public function connection()
+    {
+        return $this->connection;
+    }
+
+    /**
      * Load a job for running
      */
-    public function __construct($job, $config, $queue)
+    public function fromQueue($job, $config, $queue)
     {
         $this->job = $job;
-        $this->config = $config;
         $this->queue = $queue;
+
+        if (isset($config['data'])) {
+            $this->data = $config['data'];
+            unset($config['data']);
+        }
+
+        $this->config = $config;
+
+        return $this;
     }
 
     /**
@@ -125,11 +146,11 @@ class Batch implements Dispatchable
     /**
      * Pass data to the job
      */
-    public function with($data)
+    public static function with($data)
     {
-        $this->data = $data;
+        static::$data = $data;
 
-        return $this;
+        return new static;
     }
 
     /**

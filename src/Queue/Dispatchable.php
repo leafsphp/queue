@@ -15,7 +15,7 @@ interface Dispatchable
     /**
      * Add data to the job
      */
-    public function with($data);
+    public static function with($data);
 
     /**
      * Return job stack if available
