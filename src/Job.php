@@ -184,7 +184,7 @@ abstract class Job implements Dispatchable
     {
         static::$data[] = $data;
 
-        return new static;
+        return new static();
     }
 
     public function stack()
