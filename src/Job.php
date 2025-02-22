@@ -7,11 +7,6 @@ use Leaf\Queue\Dispatchable;
 abstract class Job implements Dispatchable
 {
     /**
-     * Job config
-     */
-    protected $config = [];
-
-    /**
      * Current job
      */
     protected $job = [];
@@ -19,7 +14,7 @@ abstract class Job implements Dispatchable
     /**
      * Data to pass to the job
      */
-    protected $data = [];
+    protected static $data = [];
 
     /**
      * Queue instance
@@ -31,6 +26,41 @@ abstract class Job implements Dispatchable
      * Configured queue connection
      */
     protected string $connection = 'default';
+
+    /**
+     * Number of seconds to wait before processing a job
+     */
+    protected int $delay = 0;
+
+    /**
+     * Number of seconds to wait before retrying a job that has failed.
+     */
+    protected $delayBeforeRetry = 0;
+
+    /**
+     * Number of seconds to wait before archiving a job that has not yet been processed
+     */
+    protected $expire = 60;
+
+    /**
+     * Force the worker to process the job, even if it has expired or has reached its maximum number of retries
+     */
+    protected $force = false;
+
+    /**
+     * The maximum amount of memory the job is allowed to consume (MB)
+     */
+    protected $memory = 128;
+
+    /**
+     * The number of seconds a child process can run before being killed.
+     */
+    protected $timeout = 60;
+
+    /**
+     * The maximum number of times the job may be attempted.
+     */
+    protected $tries = 3;
 
     /**
      * Return configured connection
@@ -49,11 +79,16 @@ abstract class Job implements Dispatchable
         $this->queue = $queue;
 
         if (isset($config['data'])) {
-            $this->data = $config['data'];
-            unset($config['data']);
+            static::$data = $config['data'];
         }
 
-        $this->config = $config;
+        $this->delay = $config['delay'] ?? 0;
+        $this->delayBeforeRetry = $config['delayBeforeRetry'] ?? 0;
+        $this->expire = $config['expire'] ?? 60;
+        $this->force = $config['force'] ?? false;
+        $this->memory = $config['memory'] ?? 128;
+        $this->timeout = $config['timeout'] ?? 60;
+        $this->tries = $config['tries'] ?? 3;
 
         return $this;
     }
@@ -73,7 +108,7 @@ abstract class Job implements Dispatchable
      */
     public function handleDelay()
     {
-        sleep($this->config['delay']);
+        sleep($this->delay);
     }
 
     /**
@@ -81,7 +116,7 @@ abstract class Job implements Dispatchable
      */
     public function hasExpired()
     {
-        return $this->job['created_at'] < time() - $this->config['expire'];
+        return $this->job['created_at'] < (time() - $this->expire);
     }
 
     /**
@@ -98,7 +133,7 @@ abstract class Job implements Dispatchable
      */
     public function hasReachedRetryLimit()
     {
-        return $this->job['retry_count'] >= $this->config['tries'];
+        return $this->job['retry_count'] >= $this->tries;
     }
 
     /**
@@ -114,7 +149,7 @@ abstract class Job implements Dispatchable
      */
     public function retry()
     {
-        sleep($this->config['delayBeforeRetry'] ?? 0);
+        sleep($this->delayBeforeRetry ?? 0);
         $this->queue->retryFailedJob($this->job['id'], $this->job['retry_count']);
     }
 
@@ -130,20 +165,26 @@ abstract class Job implements Dispatchable
 
         $this->queue->push([
             'class' => $this->job['class'],
-            'config' => json_encode($this->config),
             'status' => 'pending',
             'retry_count' => $this->job['retry_count'] + 1,
+            'config' => json_encode([
+                'delay' => $this->delay,
+                'delayBeforeRetry' => $this->delayBeforeRetry,
+                'expire' => $this->expire,
+                'force' => $this->force,
+                'memory' => $this->memory,
+                'timeout' => $this->timeout,
+                'tries' => $this->tries,
+                'data' => static::$data,
+            ]),
         ]);
     }
 
-    /**
-     * Pass data to the job
-     */
-    public function with($data)
+    public static function with($data)
     {
-        $this->data = $data;
+        static::$data[] = $data;
 
-        return $this;
+        return new static;
     }
 
     public function stack()
@@ -163,14 +204,14 @@ abstract class Job implements Dispatchable
             'sleep' => 3,
             'timeout' => 60,
             'tries' => 3,
-            'data' => $this->data,
+            'data' => static::$data,
         ];
     }
 
     public function trigger()
     {
         $this->queue->setJobStatus($this->job['id'], 'processing');
-        $this->handle(...$this->data);
+        $this->handle(...static::$data);
     }
 
     public function removeFromQueue()
