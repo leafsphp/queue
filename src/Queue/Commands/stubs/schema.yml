@@ -1,3 +1,5 @@
+timestamps: false
+
 columns:
   class: string
   config: text
@@ -5,3 +7,11 @@ columns:
   status:
     type: string
     length: 50
+  created_at:
+    type: timestamp
+    useCurrent: true
+    useCurrentOnUpdate: true
+  updated_at:
+    type: timestamp
+    useCurrent: true
+    useCurrentOnUpdate: true
