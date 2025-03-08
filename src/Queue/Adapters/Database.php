@@ -50,10 +50,6 @@ class Database implements Adapter
      */
     public function pushJobToQueue($job)
     {
-        if (!$this->db->tableExists($this->config['table'])) {
-            $this->setupAdapterStorage();
-        }
-
         $this->db
             ->insert($this->config['table'])
             ->params($job)
@@ -97,10 +93,10 @@ class Database implements Adapter
         $this->db
             ->update($this->config['table'])
             ->params([
-                "status" => $status,
+                'status' => $status,
             ])
             ->where([
-                "id" => $id,
+                'id' => $id,
             ])
             ->execute();
 
@@ -118,42 +114,7 @@ class Database implements Adapter
      */
     public function markJobAsFailed($id)
     {
-        $this->db
-            ->update($this->config['table'])
-            ->params([
-                "status" => "failed",
-            ])
-            ->where([
-                "id" => $id,
-            ])
-            ->execute();
-
-        if ($this->db->errors()) {
-            $this->errors = $this->db->errors();
-
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Setup storage for the adapter
-     */
-    protected function setupAdapterStorage()
-    {
-        $this->db
-            ->createTable($this->config['table'], [
-                'id' => 'INT NOT NULL AUTO_INCREMENT',
-                'class' => 'VARCHAR(255)',
-                'config' => 'TEXT',
-                'status' => 'VARCHAR(50)',
-                'retry_count' => 'INT',
-                'created_at' => 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
-                'updated_at' => 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'PRIMARY KEY' => '(ID)',
-            ])
-            ->execute();
+        return $this->setJobStatus($id, 'failed');
     }
 
     /**
@@ -161,7 +122,9 @@ class Database implements Adapter
      */
     public function getJobs()
     {
-        return [];
+        return $this->db
+            ->select($this->config['table'])
+            ->get();
     }
 
     /**
