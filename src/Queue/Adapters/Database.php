@@ -72,7 +72,7 @@ class Database implements Adapter
         $this->db
             ->delete($this->config['table'])
             ->where([
-                "id" => $id,
+                'id' => $id,
             ])
             ->execute();
 
@@ -150,11 +150,11 @@ class Database implements Adapter
         $this->db
             ->update($this->config['table'])
             ->params([
-                "status" => "pending",
-                "retry_count" => (int) $retryCount + 1,
+                'status' => 'pending',
+                'retry_count' => (int) $retryCount + 1,
             ])
             ->where([
-                "id" => $id,
+                'id' => $id,
             ])
             ->execute();
 
