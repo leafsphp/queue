@@ -16,9 +16,8 @@ class Redis implements Adapter
 
     protected array $config = [];
 
-    public function __construct($config = [])
+    public function __construct()
     {
-        $this->config = $config;
         $this->redis = new \Leaf\Redis();
     }
 
@@ -27,11 +26,19 @@ class Redis implements Adapter
      */
     public function connect($connection)
     {
-        $this->redis->init($connection);
+        $this->config['table'] = $connection['table'] ?? 'leaf_php_jobs';
+
+        if (redis()->ping()) {
+            $this->redis = redis();
+        } else {
+            $this->redis->connect(MvcConfig('redis'));
+        }
 
         if (!$this->redis->get($this->config['table'])) {
             $this->redis->set($this->config['table'], json_encode([]));
         }
+
+        return $this;
     }
 
     /**
@@ -84,6 +91,7 @@ class Redis implements Adapter
         foreach ($jobs as $key => $job) {
             if ($job['id'] === $id) {
                 $jobs[$key]['status'] = $status;
+
                 $this->redis->set($this->config['table'], json_encode($jobs));
 
                 return true;
@@ -116,14 +124,13 @@ class Redis implements Adapter
      */
     public function getNextJob()
     {
-        $jobs = $this->redis->get($this->config['table']) ?? [];
-        $jobs = json_decode($jobs, true);
+        foreach ($this->getJobs() as $job) {
+            if ($job['status'] === 'pending') {
+                return $job;
+            }
+        }
 
-        $job = array_values(array_filter($jobs, function ($job) {
-            return $job['status'] === 'pending';
-        }))[0] ?? null;
-
-        return $job;
+        return null;
     }
 
     /**
@@ -131,13 +138,11 @@ class Redis implements Adapter
      */
     public function retryFailedJob($id, $retryCount)
     {
-        $jobs = $this->redis->get($this->config['table']) ?? [];
-        $jobs = json_decode($jobs, true);
-
-        foreach ($jobs as $key => $job) {
+        foreach ($this->getJobs() as $key => $job) {
             if ($job['id'] === $id) {
                 $jobs[$key]['status'] = 'pending';
                 $jobs[$key]['retry_count'] = (int) $retryCount + 1;
+
                 $this->redis->set($this->config['table'], json_encode($jobs));
 
                 return true;
