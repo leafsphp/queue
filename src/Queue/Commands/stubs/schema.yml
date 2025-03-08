@@ -1,0 +1,7 @@
+columns:
+  class: string
+  config: text
+  retry_count: integer
+  status:
+    type: string
+    length: 50
