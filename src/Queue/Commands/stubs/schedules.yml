@@ -1,0 +1,3 @@
+columns:
+  class: string
+  schedule: string
