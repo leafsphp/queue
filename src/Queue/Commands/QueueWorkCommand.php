@@ -31,8 +31,14 @@ class QueueWorkCommand extends Command
                 $this->writeln("> Queue table not found. Creating queue table...");
 
                 \Leaf\FS\File::copy(__DIR__ . '/stubs/schema.yml', DatabasePath("{$this->queueConfig['connections'][$queue]['table']}.yml"));
+                \Leaf\FS\File::copy(__DIR__ . '/stubs/schedules.yml', DatabasePath("{$this->queueConfig['connections'][$queue]['schedules.table']}.yml"));
+
                 \Aloe\Core::run(
                     "php leaf db:migrate {$this->queueConfig['connections'][$queue]['table']}",
+                    $this->output
+                );
+                \Aloe\Core::run(
+                    "php leaf db:migrate {$this->queueConfig['connections'][$queue]['schedules.table']}",
                     $this->output
                 );
             }
@@ -42,6 +48,7 @@ class QueueWorkCommand extends Command
 
         (new \Leaf\Worker())
             ->queue($this->queueConfig['connections'][$queue])
+            ->scheduler($this->queueConfig['connections'][$queue])
             ->run();
 
         return 0;

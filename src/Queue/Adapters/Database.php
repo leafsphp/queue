@@ -41,6 +41,7 @@ class Database implements Adapter
         ]);
 
         $this->config['table'] = $connection['table'] ?? 'leaf_php_jobs';
+        $this->config['schedule.table'] = $connection['schedule.table'] ?? 'leaf_php_schedules';
 
         return $this;
     }
@@ -72,7 +73,7 @@ class Database implements Adapter
         $this->db
             ->delete($this->config['table'])
             ->where([
-                'id' => $id,
+                "id" => $id,
             ])
             ->execute();
 
@@ -150,11 +151,11 @@ class Database implements Adapter
         $this->db
             ->update($this->config['table'])
             ->params([
-                'status' => 'pending',
-                'retry_count' => (int) $retryCount + 1,
+                "status" => "pending",
+                "retry_count" => (int) $retryCount + 1,
             ])
             ->where([
-                'id' => $id,
+                "id" => $id,
             ])
             ->execute();
 
@@ -165,5 +166,13 @@ class Database implements Adapter
         }
 
         return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function disconnect()
+    {
+        $this->db->close();
     }
 }

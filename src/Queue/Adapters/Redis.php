@@ -27,6 +27,7 @@ class Redis implements Adapter
     public function connect($connection)
     {
         $this->config['table'] = $connection['table'] ?? 'leaf_php_jobs';
+        $this->config['schedule.table'] = $connection['schedule.table'] ?? 'leaf_php_schedules';
 
         if (redis()->ping()) {
             $this->redis = redis();
@@ -182,5 +183,13 @@ class Redis implements Adapter
             \mt_rand(0, 0xffff),
             \mt_rand(0, 0xffff)
         );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function disconnect()
+    {
+        $this->redis->close();
     }
 }

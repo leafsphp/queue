@@ -56,4 +56,9 @@ interface Adapter
      * Retry failed job
      */
     public function retryFailedJob($id, $retryCount);
+
+    /**
+     * Disconnect
+     */
+    public function disconnect();
 }
