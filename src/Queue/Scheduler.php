@@ -43,7 +43,7 @@ class Scheduler
         foreach (glob(AppPaths('jobs') . '/*.php') as $file) {
             require $file;
 
-            /**@var \Leaf\Job */
+            /** @var \Leaf\Job */
             $job = new ("App\\Jobs\\" . pathinfo($file, PATHINFO_FILENAME))();
 
             if ($schedule = $job->schedule()) {
@@ -145,6 +145,7 @@ class Scheduler
     protected function getNextRunTime(string $cronExpression): string
     {
         $cron = new \Cron\CronExpression($cronExpression);
+
         return $cron->getNextRunDate()->format('Y-m-d H:i:s');
     }
 
@@ -156,6 +157,7 @@ class Scheduler
     protected function isDue(string $cronExpression): bool
     {
         $cron = new \Cron\CronExpression($cronExpression);
+
         return $cron->isDue();
     }
 

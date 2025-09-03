@@ -231,6 +231,7 @@ abstract class Job implements Dispatchable
     public function cron($expression)
     {
         $this->schedule = $expression;
+
         return $expression;
     }
 
