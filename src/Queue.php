@@ -98,6 +98,14 @@ class Queue
     }
 
     /**
+     * Disconnect from the queue
+     */
+    public function disconnect()
+    {
+        $this->adapter->disconnect();
+    }
+
+    /**
      * Return queue commands
      */
     public static function commands()

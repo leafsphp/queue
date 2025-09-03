@@ -6,6 +6,12 @@ class Worker
 {
     /** @var \Leaf\Queue */
     protected $queue = null;
+
+    /**
+     * @var \Leaf\Queue\Scheduler
+     */
+    protected $scheduler = null;
+
     protected $config = [
         'expire' => 60,
         'delay' => 0,
@@ -17,9 +23,16 @@ class Worker
         'quitOnEmpty' => false,
     ];
 
-    public function queue($queue)
+    public function queue($connection)
     {
-        $this->queue = (new Queue())->connect($queue);
+        $this->queue = (new Queue())->connect($connection);
+
+        return $this;
+    }
+
+    public function scheduler($connection)
+    {
+        $this->scheduler = (new Queue\Scheduler())->connect($connection);
 
         return $this;
     }
@@ -31,7 +44,19 @@ class Worker
 
     public function run()
     {
+        pcntl_async_signals(true);
+        pcntl_signal(SIGINT, function () {
+            echo "Shutting down queue...\n";
+            $this->scheduler->disconnect();
+            $this->queue->disconnect();
+            exit;
+        });
+
         while (true) {
+            if ($this->scheduler->isEnabled()) {
+                $this->scheduler->writeDueSchedulesToQueue();
+            }
+
             $jobData = $this->queue->getNextJob();
 
             if (!$jobData) {

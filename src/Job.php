@@ -28,6 +28,11 @@ abstract class Job implements Dispatchable
     protected string $connection = 'default';
 
     /**
+     * Schedule to run the job (cron or interval)
+     */
+    protected $schedule = null;
+
+    /**
      * Number of seconds to wait before processing a job
      */
     protected $delay = 0;
@@ -216,5 +221,145 @@ abstract class Job implements Dispatchable
     public function removeFromQueue()
     {
         $this->queue->pop($this->job['id']);
+    }
+
+    public function schedule()
+    {
+        return null;
+    }
+
+    public function cron($expression)
+    {
+        $this->schedule = $expression;
+        return $expression;
+    }
+
+    /**
+     * Add a recurring interval to the job schedule
+     * @param string{minute|hour|day|week|month|year} $interval
+     * @throws \Exception
+     * @return static
+     */
+    public function every(string $interval)
+    {
+        if (!in_array($interval, ['minute', 'hour', 'day', 'week', 'month', 'year'])) {
+            throw new \Exception("Invalid interval: {$interval}");
+        }
+
+        if ($interval === 'minute') {
+            $interval = '* * * * *';
+        } elseif ($interval === 'hour') {
+            $interval = '0 * * * *';
+        } elseif ($interval === 'day') {
+            $interval = '0 0 * * *';
+        } elseif ($interval === 'week') {
+            $interval = '0 0 * * 0';
+        } elseif ($interval === 'month') {
+            $interval = '0 0 1 * *';
+        } elseif ($interval === 'year') {
+            $interval = '0 0 1 1 *';
+        }
+
+        $this->schedule = $interval;
+
+        return $this;
+    }
+
+    /**
+     * Add a day to the job schedule (only if interval is set)
+     * @param string{monday|tuesday|wednesday|thursday|friday|saturday|sunday} $day
+     * @throws \Exception
+     * @return static
+     */
+    public function on(string $day)
+    {
+        if (!in_array(strtolower($day), ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])) {
+            throw new \Exception("Invalid day: {$day}");
+        }
+
+        if ($this->schedule === null) {
+            throw new \Exception("You must set an interval before setting a day. E.g. ->every('week')->on('monday')");
+        }
+
+        if (strtolower($day) === 'sunday') {
+            $dayNumber = 0;
+        } elseif (strtolower($day) === 'monday') {
+            $dayNumber = 1;
+        } elseif (strtolower($day) === 'tuesday') {
+            $dayNumber = 2;
+        } elseif (strtolower($day) === 'wednesday') {
+            $dayNumber = 3;
+        } elseif (strtolower($day) === 'thursday') {
+            $dayNumber = 4;
+        } elseif (strtolower($day) === 'friday') {
+            $dayNumber = 5;
+        } elseif (strtolower($day) === 'saturday') {
+            $dayNumber = 6;
+        }
+
+        $parts = explode(' ', $this->schedule);
+
+        if (count($parts) !== 5) {
+            throw new \Exception("Invalid schedule format: {$this->schedule}");
+        }
+
+        $parts[4] = $dayNumber;
+
+        $this->schedule = implode(' ', $parts);
+
+        return $this;
+    }
+
+    /**
+     * Add a recurring interval in minutes to the job schedule
+     * @param int $minutes
+     * @throws \Exception
+     * @return static
+     */
+    public function inMinutes(int $minutes)
+    {
+        if ($minutes < 1 || $minutes > 59) {
+            throw new \Exception("Invalid minutes: {$minutes}");
+        }
+
+        $parts = explode(' ', $this->schedule);
+
+        if (count($parts) !== 5) {
+            throw new \Exception("Invalid schedule format: {$this->schedule}");
+        }
+
+        $parts[0] = "*/{$minutes}";
+
+        $this->schedule = implode(' ', $parts);
+
+        return $this;
+    }
+
+    public function at(string $time)
+    {
+        if (!preg_match('/^(2[0-3]|[01]?[0-9]):([0-5]?[0-9])$/', $time, $matches)) {
+            throw new \Exception("Invalid time format: {$time}. Expected format is HH:MM in 24-hour format.");
+        }
+
+        $hour = (int) $matches[1];
+        $minute = (int) $matches[2];
+
+        $parts = explode(' ', $this->schedule);
+
+        if (count($parts) !== 5) {
+            throw new \Exception("Invalid schedule format: {$this->schedule}");
+        }
+
+        $parts[0] = (string) $minute;
+        $parts[1] = (string) $hour;
+
+        $this->schedule = implode(' ', $parts);
+
+        return $this;
+    }
+
+    public function getSchedule()
+    {
+        return $this->schedule;
     }
 }
