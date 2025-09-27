@@ -2,19 +2,15 @@
 
 namespace Leaf\Queue\Commands;
 
-use Aloe\Command;
 use Illuminate\Support\Str;
+use Leaf\Sprout\Command;
 
 class DeleteJobCommand extends Command
 {
-    protected static $defaultName = 'd:job';
-    public $description = 'Delete a job class';
-    public $help = 'Delete a job class';
-
-    protected function config()
-    {
-        $this->setArgument('job', 'required', 'job name');
-    }
+    protected $signature = 'd:job
+        {job : job name}';
+    protected $description = 'Delete a job class';
+    protected $help = 'Delete a job class';
 
     protected function handle()
     {
@@ -24,15 +20,14 @@ class DeleteJobCommand extends Command
             $job .= 'Job';
         }
 
-        $file = \Aloe\Command\Config::rootpath(AppPaths('jobs') . "/$job.php");
+        $file = getcwd() . DIRECTORY_SEPARATOR . AppPaths('jobs') . "/$job.php";
 
-        if (!file_exists($file)) {
+        if (!\Leaf\FS\File::exists($file)) {
             $this->error("$job doesn't exist");
-
             return 1;
         }
 
-        unlink($file);
+        \Leaf\FS\File::delete($file);
 
         $this->comment("$job deleted successfully");
 
