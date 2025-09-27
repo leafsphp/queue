@@ -31,6 +31,7 @@ class GenerateJobCommand extends Command
 
         if (\Leaf\FS\File::exists($file)) {
             $this->error("$job already exists");
+
             return 1;
         }
 

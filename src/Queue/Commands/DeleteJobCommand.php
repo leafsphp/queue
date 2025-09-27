@@ -24,6 +24,7 @@ class DeleteJobCommand extends Command
 
         if (!\Leaf\FS\File::exists($file)) {
             $this->error("$job doesn't exist");
+
             return 1;
         }
 
