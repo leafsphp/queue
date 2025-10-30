@@ -2,46 +2,45 @@
 
 namespace Leaf\Queue\Commands;
 
-use Aloe\Command;
 use Illuminate\Support\Str;
+use Leaf\Sprout\Command;
 
 class GenerateJobCommand extends Command
 {
-    protected static $defaultName = 'g:job';
-    public $description = 'Create a job class';
-    public $help = 'Generate a new job class';
-
-    protected function config()
-    {
-        $this->setArgument('job', 'required', 'job name');
-    }
+    protected $signature = 'g:job
+        {job : job name}';
+    protected $description = 'Create a job class';
+    protected $help = 'Generate a new job class';
 
     protected function handle()
     {
+        $rootDir = getcwd();
         $job = Str::studly(Str::singular($this->argument('job')));
 
         if (!strpos($job, 'Job')) {
             $job .= 'Job';
         }
 
-        $file = \Aloe\Command\Config::rootpath(AppPaths('jobs') . "/$job.php");
+        $file = $rootDir . DIRECTORY_SEPARATOR . AppPaths('jobs') . "/$job.php";
 
-        if (!is_dir(\Aloe\Command\Config::rootpath(AppPaths('jobs')))) {
-            mkdir(\Aloe\Command\Config::rootpath(AppPaths('jobs')));
+        if (!\Leaf\FS\Directory::exists($rootDir . DIRECTORY_SEPARATOR . AppPaths('jobs'))) {
+            \Leaf\FS\Directory::create($rootDir . DIRECTORY_SEPARATOR . AppPaths('jobs'), [
+                'recursive' => true,
+            ]);
         }
 
-        if (file_exists($file)) {
+        if (\Leaf\FS\File::exists($file)) {
             $this->error("$job already exists");
 
             return 1;
         }
 
-        touch($file);
+        \Leaf\FS\File::create($file, function () use ($job) {
+            $fileContent = \file_get_contents(__DIR__ . '/stubs/job.stub');
+            $fileContent = str_replace('ClassName', $job, $fileContent);
 
-        $fileContent = \file_get_contents(__DIR__ . '/stubs/job.stub');
-        $fileContent = str_replace('ClassName', $job, $fileContent);
-
-        file_put_contents($file, $fileContent);
+            return $fileContent;
+        });
 
         $this->comment("$job generated successfully");
 
