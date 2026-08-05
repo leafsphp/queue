@@ -75,6 +75,14 @@ class Worker
             /** @var \Leaf\Job */
             $job = (new $jobData['class']())->fromQueue($jobData, $jobConfig, $this->queue);
 
+            if (function_exists('crash')) {
+                // workers are long-running: each job starts a fresh journey
+                crash()->breadcrumbs()->clear();
+                crash()->leaveCrumb('job: ' . $jobData['class'], 'job', [
+                    'id' => $job->getJobId(),
+                ], false);
+            }
+
             $job->handleDelay();
 
             if ($job->hasExpired()) {
