@@ -2,6 +2,15 @@ columns:
   class: string
   config: text
   retry_count: integer
+  available_at: integer
+  created_at: integer
+  updated_at: integer
+  failed_at:
+    type: integer
+    nullable: true
+  exception:
+    type: text
+    nullable: true
   status:
     type: string
     length: 50

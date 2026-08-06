@@ -40,23 +40,16 @@ function dispatch($dispatchable)
     $jobConnection = $dispatchable->connection();
 
     $defaultConnection = $queueModuleConfig['connections'][$queueModuleConfig['default'] ?? 'database'];
-
-    // if (\Leaf\Config::getStatic('queue')) {
-    //     return queue()->push([
-    //         'class' => $jobOrBatch,
-    //         'config' => $jobOrBatch->getConfig(),
-    //         'status' => 'pending',
-    //         'retry_count' => 0,
-    //     ]);
-    // }
+    $dispatchableConfig = $dispatchable->getConfig();
 
     // can optimize by saving a cached version of this instance
     queue()->connect($queueModuleConfig['connections'][$jobConnection] ?? $defaultConnection);
 
     return queue()->push([
         'class' => $dispatchable::class,
-        'config' => json_encode($dispatchable->getConfig()),
+        'config' => json_encode($dispatchableConfig),
         'status' => 'pending',
         'retry_count' => 0,
+        'available_at' => time() + ($dispatchableConfig['delay'] ?? 0),
     ]);
 }

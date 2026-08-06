@@ -43,8 +43,14 @@ class Scheduler
         foreach (glob(AppPaths('jobs') . '/*.php') as $file) {
             require $file;
 
+            $class = 'App\\Jobs\\' . pathinfo($file, PATHINFO_FILENAME);
+
+            if (!class_exists($class) || !is_subclass_of($class, \Leaf\Job::class)) {
+                continue;
+            }
+
             /** @var \Leaf\Job */
-            $job = new ("App\\Jobs\\" . pathinfo($file, PATHINFO_FILENAME))();
+            $job = new $class();
 
             if ($schedule = $job->schedule()) {
                 $this->schedule[] = [
@@ -103,7 +109,10 @@ class Scheduler
                     ->execute();
             } else {
                 $this->adapter->insert($this->connection['table'])
-                    ->params($schedule)
+                    ->params(array_merge($schedule, [
+                        'run_count' => 0,
+                        'last_run' => null,
+                    ]))
                     ->execute();
             }
         }
