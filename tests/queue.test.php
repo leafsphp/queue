@@ -160,3 +160,53 @@ test('queue:work errors when no queue and no default is configured', function ()
     expect($queue)->toBeNull();
     expect($error)->toContain('No queue specified');
 });
+
+test('a failing job is reported to crash when the app has it, with job context', function () {
+    \Tests\CrashSpy::instance()->reset();
+
+    dispatch(new QueueTestFailJob()); // throws, tries = 2
+
+    runWorker();
+
+    $captures = \Tests\CrashSpy::instance()->captures;
+
+    // one per attempt: the initial run and the retry
+    expect($captures)->toHaveCount(2);
+
+    [$exception, $options] = $captures[0];
+
+    expect($exception)->toBeInstanceOf(\Throwable::class);
+    expect($exception->getMessage())->toContain('boom from QueueTestFailJob');
+
+    // a worker's shutdown handler never runs, so reports must not be buffered
+    expect($options['immediately'])->toBeTrue();
+
+    expect($options['job']['class'])->toBe(QueueTestFailJob::class);
+    expect($options['job']['attempt'])->toBe(1);
+    expect($options['job']['id'])->not->toBeEmpty();
+
+    // the second capture is the retry
+    expect($captures[1][1]['job']['attempt'])->toBe(2);
+});
+
+test('a broken crash reporter does not take the worker down', function () {
+    \Tests\CrashSpy::instance()->reset();
+    \Tests\CrashSpy::instance()->explode = true;
+
+    dispatch(new QueueTestFailJob());
+
+    runWorker(); // must not throw
+
+    // the reporter really was called and really did blow up, so the guard
+    // is what kept the worker alive rather than the call never happening
+    expect(\Tests\CrashSpy::instance()->attempts)->toBe(2);
+    expect(\Tests\CrashSpy::instance()->captures)->toBeEmpty();
+
+    \Tests\CrashSpy::instance()->explode = false;
+
+    // the job still went through its normal retry-then-fail path
+    $row = jobRows()[0];
+
+    expect($row['status'])->toBe('failed');
+    expect($row['exception'])->toContain('boom from QueueTestFailJob');
+});

@@ -49,6 +49,36 @@ class Worker
         return $this;
     }
 
+    /**
+     * Send a failed job to crash, if the app has it installed.
+     *
+     * Reporting must never be able to take the worker down, so every failure
+     * here is swallowed: a job that failed is already bad news, and a broken
+     * reporter turning that into a dead worker is worse.
+     */
+    protected function report(\Throwable $exception, $job, array $jobData): void
+    {
+        if (!function_exists('crash')) {
+            return;
+        }
+
+        try {
+            crash()->capture($exception, [
+                // A worker never shuts down, so its shutdown handler never runs.
+                // A buffered report would sit unsent and grow the buffer forever.
+                'immediately' => true,
+                'job' => [
+                    'id' => $job->getJobId(),
+                    'class' => $jobData['class'] ?? null,
+                    'attempt' => ((int) ($jobData['retry_count'] ?? 0)) + 1,
+                    'queue' => $jobData['queue'] ?? null,
+                ],
+            ]);
+        } catch (\Throwable $reportingFailed) {
+            echo "  - (could not report job #{$job->getJobId()} to crash: {$reportingFailed->getMessage()})\n";
+        }
+    }
+
     public function run()
     {
         if (function_exists('pcntl_async_signals')) {
@@ -122,6 +152,8 @@ class Worker
                 continue;
             } catch (\Throwable $th) {
                 echo "  - Job #{$job->getJobId()} failed: {$th->getMessage()}\n";
+
+                $this->report($th, $job, $jobData);
 
                 $job->retry($th);
 

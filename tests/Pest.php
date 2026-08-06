@@ -14,6 +14,15 @@
 define('SANDBOX', '/tmp/queuetestsandbox' . (getenv('TEST_TOKEN') ? '-' . getenv('TEST_TOKEN') : ''));
 
 require __DIR__ . '/shims/Globals.php';
+require __DIR__ . '/shims/CrashSpy.php';
+
+if (!function_exists('crash')) {
+    function crash()
+    {
+        return \Tests\CrashSpy::instance();
+    }
+}
+
 require __DIR__ . '/shims/Config.php';
 require __DIR__ . '/jobs.php';
 
