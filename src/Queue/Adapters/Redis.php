@@ -5,10 +5,24 @@ namespace Leaf\Queue\Adapters;
 /**
  * Redis adapter
  * -----
- * Redis adapter for the worker
+ * Redis adapter for the worker.
+ *
+ * Storage layout (real redis structures, no json blob):
+ * - {table}:pending — LIST of job ids ready to run (RPUSH to enqueue, LPOP to claim)
+ * - {table}:delayed — ZSET of job ids scored by available_at
+ * - {table}:job:{id} — HASH holding the job payload/status
+ *
+ * Raw redis commands (rpush, lpop, hset, zadd, ...) are issued through
+ * \Leaf\Redis::connection(), which proxies to the underlying phpredis or
+ * predis client via __call.
  */
 class Redis implements Adapter
 {
+    /**
+     * Seconds a job can sit in 'processing' before it is considered stuck
+     */
+    protected const STUCK_JOB_TIMEOUT = 300;
+
     /** @var \Leaf\Redis */
     protected $redis;
 
@@ -35,11 +49,30 @@ class Redis implements Adapter
             $this->redis->connect(MvcConfig('redis'));
         }
 
-        if (!$this->redis->get($this->config['table'])) {
-            $this->redis->set($this->config['table'], json_encode([]));
-        }
-
         return $this;
+    }
+
+    /**
+     * The raw redis client (phpredis or predis)
+     */
+    protected function client()
+    {
+        return $this->redis->connection();
+    }
+
+    protected function pendingKey(): string
+    {
+        return "{$this->config['table']}:pending";
+    }
+
+    protected function delayedKey(): string
+    {
+        return "{$this->config['table']}:delayed";
+    }
+
+    protected function jobKey($id): string
+    {
+        return "{$this->config['table']}:job:{$id}";
     }
 
     /**
@@ -47,16 +80,20 @@ class Redis implements Adapter
      */
     public function pushJobToQueue($job)
     {
-        $job = array_merge($job, [
+        $job = array_merge([
             'id' => self::v4(),
+            'available_at' => time(),
             'created_at' => time(),
             'updated_at' => time(),
-        ]);
+        ], $job);
 
-        $data = $this->redis->get($this->config['table']) ?? [];
-        $data = json_decode($data, true);
+        $this->client()->hmset($this->jobKey($job['id']), $job);
 
-        $this->redis->set($this->config['table'], json_encode(array_merge($data, [$job])));
+        if ($job['available_at'] > time()) {
+            $this->client()->zadd($this->delayedKey(), $job['available_at'], $job['id']);
+        } else {
+            $this->client()->rpush($this->pendingKey(), $job['id']);
+        }
 
         return true;
     }
@@ -66,19 +103,15 @@ class Redis implements Adapter
      */
     public function popJobFromQueue($id)
     {
-        $jobs = $this->redis->get($this->config['table']) ?? [];
-        $jobs = json_decode($jobs, true);
-
-        foreach ($jobs as $key => $job) {
-            if ($job['id'] === $id) {
-                unset($jobs[$key]);
-                $this->redis->set($this->config['table'], json_encode($jobs));
-
-                return true;
-            }
+        // phpredis and predis disagree on lrem() argument order
+        if ($this->redis->connection() instanceof \Leaf\Redis\Predis) {
+            $this->client()->lrem($this->pendingKey(), 0, $id);
+        } else {
+            $this->client()->lrem($this->pendingKey(), $id, 0);
         }
+        $this->client()->zrem($this->delayedKey(), $id);
 
-        return false;
+        return (bool) $this->client()->del($this->jobKey($id));
     }
 
     /**
@@ -86,28 +119,35 @@ class Redis implements Adapter
      */
     public function setJobStatus($id, $status)
     {
-        $jobs = $this->redis->get($this->config['table']) ?? [];
-        $jobs = json_decode($jobs, true);
-
-        foreach ($jobs as $key => $job) {
-            if ($job['id'] === $id) {
-                $jobs[$key]['status'] = $status;
-
-                $this->redis->set($this->config['table'], json_encode($jobs));
-
-                return true;
-            }
+        if (!$this->client()->exists($this->jobKey($id))) {
+            return false;
         }
 
-        return false;
+        $this->client()->hmset($this->jobKey($id), [
+            'status' => $status,
+            'updated_at' => time(),
+        ]);
+
+        return true;
     }
 
     /**
      * @inheritDoc
      */
-    public function markJobAsFailed($id)
+    public function markJobAsFailed($id, $exception = null)
     {
-        return $this->setJobStatus($id, 'failed');
+        if (!$this->client()->exists($this->jobKey($id))) {
+            return false;
+        }
+
+        $this->client()->hmset($this->jobKey($id), [
+            'status' => 'failed',
+            'failed_at' => time(),
+            'exception' => (string) $exception,
+            'updated_at' => time(),
+        ]);
+
+        return true;
     }
 
     /**
@@ -115,9 +155,17 @@ class Redis implements Adapter
      */
     public function getJobs()
     {
-        $jobs = $this->redis->get($this->config['table']) ?? [];
+        $jobs = [];
 
-        return json_decode($jobs, true);
+        foreach ($this->client()->keys("{$this->config['table']}:job:*") as $key) {
+            $job = $this->client()->hgetall($key);
+
+            if ($job) {
+                $jobs[] = $job;
+            }
+        }
+
+        return $jobs;
     }
 
     /**
@@ -125,10 +173,26 @@ class Redis implements Adapter
      */
     public function getNextJob()
     {
-        foreach ($this->getJobs() as $job) {
-            if ($job['status'] === 'pending') {
-                return $job;
+        // move due delayed jobs onto the pending list
+        $dueJobs = $this->client()->zrangebyscore($this->delayedKey(), '-inf', time());
+
+        foreach ($dueJobs as $dueJobId) {
+            $this->client()->zrem($this->delayedKey(), $dueJobId);
+            $this->client()->rpush($this->pendingKey(), $dueJobId);
+        }
+
+        while (($id = $this->client()->lpop($this->pendingKey()))) {
+            $job = $this->client()->hgetall($this->jobKey($id));
+
+            if (!$job) {
+                continue; // job hash was deleted, skip the orphaned id
             }
+
+            if (($job['status'] ?? null) !== 'pending') {
+                continue;
+            }
+
+            return $job;
         }
 
         return null;
@@ -137,20 +201,53 @@ class Redis implements Adapter
     /**
      * @inheritDoc
      */
-    public function retryFailedJob($id, $retryCount)
+    public function retryFailedJob($id, $retryCount, $delay = 0)
     {
-        foreach ($this->getJobs() as $key => $job) {
-            if ($job['id'] === $id) {
-                $jobs[$key]['status'] = 'pending';
-                $jobs[$key]['retry_count'] = (int) $retryCount + 1;
+        if (!$this->client()->exists($this->jobKey($id))) {
+            return false;
+        }
 
-                $this->redis->set($this->config['table'], json_encode($jobs));
+        $availableAt = time() + (int) $delay;
 
-                return true;
+        $this->client()->hmset($this->jobKey($id), [
+            'status' => 'pending',
+            'retry_count' => (int) $retryCount + 1,
+            'available_at' => $availableAt,
+            'updated_at' => time(),
+        ]);
+
+        if ($availableAt > time()) {
+            $this->client()->zadd($this->delayedKey(), $availableAt, $id);
+        } else {
+            $this->client()->rpush($this->pendingKey(), $id);
+        }
+
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * Jobs stuck in 'processing' (worker crashed mid-job) are reset to
+     * 'pending' and pushed back onto the pending list.
+     */
+    public function resetStuckJobs()
+    {
+        foreach ($this->getJobs() as $job) {
+            if (
+                ($job['status'] ?? null) === 'processing'
+                && ((int) ($job['updated_at'] ?? 0)) < (time() - static::STUCK_JOB_TIMEOUT)
+            ) {
+                $this->client()->hmset($this->jobKey($job['id']), [
+                    'status' => 'pending',
+                    'updated_at' => time(),
+                ]);
+
+                $this->client()->rpush($this->pendingKey(), $job['id']);
             }
         }
 
-        return false;
+        return true;
     }
 
     /**

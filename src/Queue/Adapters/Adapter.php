@@ -49,13 +49,23 @@ interface Adapter
 
     /**
      * Mark job as failed
+     * @param string|int $id The id of the job to mark as failed
+     * @param string|null $exception The exception that caused the failure
      */
-    public function markJobAsFailed($id);
+    public function markJobAsFailed($id, $exception = null);
 
     /**
      * Retry failed job
+     * @param string|int $id The id of the job to retry
+     * @param string|int $retryCount The number of times the job has been retried
+     * @param int $delay Seconds to wait before the job becomes available again
      */
-    public function retryFailedJob($id, $retryCount);
+    public function retryFailedJob($id, $retryCount, $delay = 0);
+
+    /**
+     * Reset jobs stuck in 'processing' (eg. after a worker crash) back to 'pending'
+     */
+    public function resetStuckJobs();
 
     /**
      * Disconnect

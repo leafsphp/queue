@@ -81,20 +81,22 @@ class Queue
     /**
      * Mark job as failed
      * @param string|int $id The id of the job to mark as failed
+     * @param string|null $exception The exception that caused the failure
      */
-    public function markJobAsFailed($id)
+    public function markJobAsFailed($id, $exception = null)
     {
-        $this->adapter->markJobAsFailed($id);
+        $this->adapter->markJobAsFailed($id, $exception);
     }
 
     /**
      * Retry failed job
      * @param string|int $id The id of the job to retry
      * @param string|int $retryCount The number of times the job has been retried
+     * @param int $delay Seconds to wait before the job becomes available again
      */
-    public function retryFailedJob($id, $retryCount = 0)
+    public function retryFailedJob($id, $retryCount = 0, $delay = 0)
     {
-        $this->adapter->retryFailedJob($id, $retryCount);
+        $this->adapter->retryFailedJob($id, $retryCount, $delay);
     }
 
     /**

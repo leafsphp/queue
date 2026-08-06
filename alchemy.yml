@@ -1,0 +1,29 @@
+app:
+  - src
+
+tests:
+  engine: pest
+  parallel: false
+  paths:
+    - tests
+  files:
+    - '*.test.php'
+  coverage:
+    local: false
+    actions: false
+
+lint:
+  preset: PSR12
+
+actions:
+  run:
+    - lint
+  os:
+    - ubuntu-latest
+  php:
+    versions:
+      - '8.2'
+      - '8.3'
+  events:
+    - push
+    - pull_request

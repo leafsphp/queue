@@ -1,3 +1,12 @@
 columns:
   class: string
   schedule: string
+  next_run:
+    type: string
+    nullable: true
+  last_run:
+    type: string
+    nullable: true
+  run_count:
+    type: integer
+    default: 0
