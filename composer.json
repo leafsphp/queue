@@ -34,7 +34,8 @@
         "leafs/db": "*",
         "leafs/redis": "*",
         "pestphp/pest": "*",
-        "friendsofphp/php-cs-fixer": "^3.0"
+        "friendsofphp/php-cs-fixer": "*",
+        "leafs/alchemy": "v5.x-dev"
     },
     "scripts": {
         "format": "vendor/bin/php-cs-fixer fix --config=.php_cs.dist.php --allow-risky=yes",
