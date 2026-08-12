@@ -31,14 +31,13 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require-dev": {
-        "leafs/db": "*",
-        "leafs/redis": "*",
+        "leafs/db": "^5.0",
+        "leafs/redis": "^5.0",
         "pestphp/pest": "*",
         "friendsofphp/php-cs-fixer": "*",
-        "leafs/alchemy": "v5.x-dev"
+        "leafs/alchemy": "^5.0"
     },
     "scripts": {
-        "format": "vendor/bin/php-cs-fixer fix --config=.php_cs.dist.php --allow-risky=yes",
         "alchemy": "@php vendor/bin/alchemy all",
         "test": "@php vendor/bin/alchemy test",
         "lint": "@php vendor/bin/alchemy lint",
@@ -54,12 +53,7 @@
     },
     "require": {
         "php": "^8.2",
-        "dragonmantank/cron-expression": "^3.4",
-        "leafs/sprout": "*"
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-v5.x": "5.0.x-dev"
-        }
+        "dragonmantank/cron-expression": "*",
+        "leafs/sprout": "^5.0"
     }
 }
