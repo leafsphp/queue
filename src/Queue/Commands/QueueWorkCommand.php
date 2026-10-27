@@ -25,7 +25,7 @@ class QueueWorkCommand extends Command
     public static function resolveQueueConnection(?string $option, ?array $config): array
     {
         $config = $config ?? [];
-        $queue = $option ?? $config['default'] ?? null;
+        $queue = $option ?: ($config['default'] ?? null);
 
         if (!$queue) {
             return [null, 'No queue specified and no default queue configured. Set `default` in your queue config or pass --queue.'];
